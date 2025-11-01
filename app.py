@@ -28,18 +28,23 @@ password = os.getenv('password')
 
 subreddit_name = st.sidebar.text_input("Subreddit Name", value="SRMUNIVERSITY", help="Enter the subreddit without 'r/'")
 num_posts = st.sidebar.slider("Number of Posts", min_value=10, max_value=500, value=100, step=10)
-target_language = st.sidebar.selectbox(
+
+# Language mapping
+languages = {
+    "English": "en",
+    "Hindi": "hi",
+    "Spanish": "es",
+    "French": "fr",
+    "Tamil": "ta",
+}
+
+language_name = st.sidebar.selectbox(
     "Target Language for Translation",
-    options=[
-        ("English", "en"),
-        ("Hindi", "hi"),
-        ("Spanish", "es"),
-        ("French", "fr"),
-        ("Tamil", "ta"),
-    ],
+    options=list(languages.keys()),
     index=0,
     help="Select a language to translate post titles"
 )
+target_language = (language_name, languages[language_name])
 
 
 if not all([client_id, client_secret, username, password]):
@@ -123,8 +128,16 @@ with col2:
     scrape_button = st.button("🚀 Start Scraping", use_container_width=True)
 
 if scrape_button:
-    st.info(f"Scraping r/{subreddit_name}... This may take a moment.")
+    # Create a placeholder for the status message
+    status_placeholder = st.empty()
+    
+    with status_placeholder.container():
+        st.info(f"Scraping r/{subreddit_name}... This may take a moment.")
+    
     df = scrape_reddit(subreddit_name, num_posts, target_language[1])
+    
+    # Clear the loading message
+    status_placeholder.empty()
     
     if df is not None and len(df) > 0:
         st.success(f"✅ Successfully scraped {len(df)} posts!")
@@ -139,8 +152,12 @@ if scrape_button:
 if "df" in st.session_state and st.session_state.df is not None:
     df = st.session_state.df
     
+    # Check if the selected language exists in the data
+    translated_col = f'title_{target_language[1]}'
+    if target_language[1] != 'en' and translated_col not in df.columns:
+        st.warning(f"⚠️ This data was scraped in a different language. To view translations in **{target_language[0]}**, please scrape again with that language selected.")
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Data Table", "📊 Analytics", " Details", "📚 Study Resources", "💾 Download"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Data Table", " Details", "📊 Analytics", "📚 Study Resources", "💾 Download"])
     
     with tab1:
         st.subheader("Posts Data")
@@ -184,7 +201,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             """, unsafe_allow_html=True)
     
     with tab2:
-        st.subheader("📈 Analytics")
+        st.subheader(" Post Details")
         
         col1, col2, col3, col4 = st.columns(4)
         
@@ -228,7 +245,7 @@ if "df" in st.session_state and st.session_state.df is not None:
         st.pyplot(fig)
     
     with tab3:
-        st.subheader(" Post Details")
+        st.subheader("📈 Analytics")
         
 
         post_index = st.selectbox(
