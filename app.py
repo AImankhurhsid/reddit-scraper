@@ -156,7 +156,7 @@ if "df" in st.session_state and st.session_state.df is not None:
     if target_language[1] != 'en' and translated_col not in df.columns:
         st.warning(f"⚠️ This data was scraped in a different language. To view translations in **{target_language[0]}**, please scrape again with that language selected.")
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Data Table", " Details", "📊 Analytics", "📚 Study Resources", "💾 Download"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 Data Table", "📊 Analytics", "📚 Study Resources", "💾 Download"])
     
     with tab1:
         st.subheader("Posts Data")
@@ -196,8 +196,10 @@ if "df" in st.session_state and st.session_state.df is not None:
             st.markdown(html_table, unsafe_allow_html=True)
     
     with tab2:
-        st.subheader(" Post Details")
+        st.subheader("📊 Analytics & Insights")
         
+        # ===== OVERVIEW METRICS =====
+        st.write("### 📈 Overview Metrics")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -212,7 +214,10 @@ if "df" in st.session_state and st.session_state.df is not None:
         with col4:
             st.metric("Max Score", df['score'].max())
         
-
+        st.divider()
+        
+        # ===== AGGREGATE CHARTS =====
+        st.write("### 📊 Distribution Charts")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -231,17 +236,12 @@ if "df" in st.session_state and st.session_state.df is not None:
             ax.set_xlabel('Number of Posts')
             st.pyplot(fig)
         
-
         st.subheader("Score vs Comments")
         fig, ax = plt.subplots()
         ax.scatter(df['score'], df['comments'], alpha=0.6, s=50)
         ax.set_xlabel('Score')
         ax.set_ylabel('Number of Comments')
         st.pyplot(fig)
-        
-    
-    with tab3:
-        st.subheader("📈 Analytics")
         
         # Topic distribution if available
         if 'topic' in df.columns:
@@ -251,11 +251,14 @@ if "df" in st.session_state and st.session_state.df is not None:
             ax.bar([f'Topic {i}' for i in topic_counts.index], topic_counts.values, color='mediumpurple')
             ax.set_ylabel('Number of Posts')
             st.pyplot(fig)
-            st.divider()
         
-
+        st.divider()
+        
+        # ===== INDIVIDUAL POST DEEP DIVE =====
+        st.write("### 🔍 Individual Post Deep Dive")
+        
         post_index = st.selectbox(
-            "Select a post",
+            "Select a post to view details:",
             options=range(len(df)),
             format_func=lambda x: df.iloc[x]['title'][:60] + "..."
         )
@@ -285,14 +288,20 @@ if "df" in st.session_state and st.session_state.df is not None:
                     st.success(post[content_translated_col][:500] + "..." if len(str(post[content_translated_col])) > 500 else post[content_translated_col])
             
             st.divider()
-            st.write(f"**Score:** {post['score']}")
-            st.write(f"**Comments:** {post['comments']}")
-            st.write(f"**Upvote Ratio:** {post['upvote_ratio']:.1%}")
+            st.write("### Post Statistics")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Score", post['score'])
+            with col2:
+                st.metric("Comments", post['comments'])
+            with col3:
+                st.metric("Upvote Ratio", f"{post['upvote_ratio']:.1%}")
+            
             st.write(f"**Flair:** {post['flair']}")
             st.write(f"**Author:** {post['author']}")
             st.write(f"**URL:** [View Post]({post['url']})")
     
-    with tab4:
+    with tab3:
         st.subheader("📚 Study Resources by Type")
         st.write("Browse and filter study materials by resource type")
         
@@ -371,7 +380,7 @@ if "df" in st.session_state and st.session_state.df is not None:
         else:
             st.warning(f"No {filter_label.lower()} found")
     
-    with tab5:
+    with tab4:
         st.subheader("💾 Download Data")
         
         csv = df.to_csv(index=False)
