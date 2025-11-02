@@ -167,7 +167,7 @@ def main():
                 'urls': urls,
                 'score': post.score,
                 'created_utc': post.created_utc,
-                'num_comments': post.num_comments,
+                'comments': post.num_comments,
                 'author': str(post.author),
                 'permalink': f"https://reddit.com{post.permalink}",
                 'upvote_ratio': post.upvote_ratio,

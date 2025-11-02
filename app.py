@@ -94,7 +94,7 @@ def scrape_reddit(subreddit_name, num_posts, target_lang):
                 f'title_{target_lang}': translated_title,
                 'score': post.score,
                 'created_utc': post.created_utc,
-                'num_comments': post.num_comments,
+                'comments': post.num_comments,
                 'author': str(post.author),
                 'upvote_ratio': post.upvote_ratio,
                 'flair': post.link_flair_text,
@@ -175,7 +175,7 @@ if "df" in st.session_state and st.session_state.df is not None:
         )
         
         # Set default columns based on what's actually available
-        default_cols = ['title', 'num_comments', 'flair']
+        default_cols = ['title', 'comments', 'flair']
         if 'topic' in df_display.columns:
             default_cols.insert(1, 'topic')
         if translated_col_name in df_display.columns:
@@ -207,7 +207,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             st.metric("Avg Score", f"{df['score'].mean():.1f}")
         
         with col3:
-            st.metric("Total Comments", int(df['num_comments'].sum()))
+            st.metric("Total Comments", int(df['comments'].sum()))
         
         with col4:
             st.metric("Max Score", df['score'].max())
@@ -234,7 +234,7 @@ if "df" in st.session_state and st.session_state.df is not None:
 
         st.subheader("Score vs Comments")
         fig, ax = plt.subplots()
-        ax.scatter(df['score'], df['num_comments'], alpha=0.6, s=50)
+        ax.scatter(df['score'], df['comments'], alpha=0.6, s=50)
         ax.set_xlabel('Score')
         ax.set_ylabel('Number of Comments')
         st.pyplot(fig)
@@ -286,7 +286,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             
             st.divider()
             st.write(f"**Score:** {post['score']}")
-            st.write(f"**Comments:** {post['num_comments']}")
+            st.write(f"**Comments:** {post['comments']}")
             st.write(f"**Upvote Ratio:** {post['upvote_ratio']:.1%}")
             st.write(f"**Flair:** {post['flair']}")
             st.write(f"**Author:** {post['author']}")
@@ -358,7 +358,7 @@ if "df" in st.session_state and st.session_state.df is not None:
                         st.write(f"**{row['title']}**")
                         year_badge = f"📅 {row['academic_year']}" if row['academic_year'] != 'Not Specified' else ""
                         type_badge = f"📚 {row['resource_type']}"
-                        st.caption(f"By: {row['author']} | Score: {row['score']} | Comments: {row['num_comments']} | {type_badge} {year_badge}")
+                        st.caption(f"By: {row['author']} | Score: {row['score']} | Comments: {row['comments']} | {type_badge} {year_badge}")
                     
                     with col2:
                         post_url = row['permalink'] if 'permalink' in row else row['url'] if 'url' in row else '#'
