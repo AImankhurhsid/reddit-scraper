@@ -292,7 +292,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             st.write(f"**Author:** {post['author']}")
             st.write(f"**URL:** [View Post]({post['url']})")
     
-    with tab5:
+    with tab4:
         st.subheader("📚 Study Resources by Year")
         st.write("Find study materials organized by academic year and subject")
         
@@ -332,24 +332,27 @@ if "df" in st.session_state and st.session_state.df is not None:
         df['academic_year'] = df['title'].apply(detect_year)
         
         # Sidebar filters
-        st.write("### Filter Resources")
+        st.write("### 🎯 Filter Resources")
         filter_option = st.radio("Filter by:", ["Resource Type", "Academic Year", "View All"], horizontal=True)
         
         if filter_option == "Resource Type":
-            selected_filter = st.selectbox("Select Resource Type:", sorted(df['resource_type'].unique()))
+            resource_types = sorted(df['resource_type'].unique())
+            selected_filter = st.selectbox("Select Resource Type:", resource_types)
             filtered_df = df[df['resource_type'] == selected_filter]
             filter_label = selected_filter
         elif filter_option == "Academic Year":
-            selected_filter = st.selectbox("Select Year:", sorted(df['academic_year'].unique()))
+            years = sorted(df['academic_year'].unique())
+            selected_filter = st.selectbox("Select Year:", years)
             filtered_df = df[df['academic_year'] == selected_filter]
             filter_label = selected_filter
         else:
             filtered_df = df.sort_values('score', ascending=False)
             filter_label = "All Resources"
         
+        st.info(f"📌 Showing {len(filtered_df)} resources in **{filter_label}**")
+        
         if len(filtered_df) > 0:
-            st.success(f"Found {len(filtered_df)} resources in {filter_label}")
-            
+            st.divider()
             for idx, row in filtered_df.iterrows():
                 with st.container():
                     col1, col2 = st.columns([4, 1])
@@ -361,14 +364,16 @@ if "df" in st.session_state and st.session_state.df is not None:
                         st.caption(f"By: {row['author']} | Score: {row['score']} | Comments: {row['comments']} | {type_badge} {year_badge}")
                     
                     with col2:
-                        post_url = row['permalink'] if 'permalink' in row else row['url'] if 'url' in row else '#'
-                        st.markdown(f"[View →]({post_url})")
+                        post_url = row['permalink'] if 'permalink' in row else row.get('url', '#')
+                        if post_url != '#':
+                            st.markdown(f"[View →]({post_url})")
                     
                     st.write("---")
         else:
-            st.info(f"No resources found in {filter_label}")
+            st.warning(f"❌ No resources found in **{filter_label}**")
         
         # Statistics
+        st.divider()
         st.subheader("📊 Resource Statistics")
         col1, col2, col3 = st.columns(3)
         
@@ -388,16 +393,17 @@ if "df" in st.session_state and st.session_state.df is not None:
         
         with col1:
             year_dist = df['academic_year'].value_counts()
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(8, 4))
             year_dist.plot(kind='bar', ax=ax, color='skyblue')
             ax.set_title('Posts by Academic Year')
             ax.set_xlabel('Year')
             ax.set_ylabel('Count')
+            plt.xticks(rotation=45)
             st.pyplot(fig)
         
         with col2:
             resource_dist = df['resource_type'].value_counts()
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(8, 4))
             resource_dist.plot(kind='barh', ax=ax, color='lightcoral')
             ax.set_title('Posts by Resource Type')
             ax.set_xlabel('Count')
