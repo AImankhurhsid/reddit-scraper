@@ -239,6 +239,10 @@ if "df" in st.session_state and st.session_state.df is not None:
         ax.set_ylabel('Number of Comments')
         st.pyplot(fig)
         
+    
+    with tab3:
+        st.subheader("📈 Analytics")
+        
         # Topic distribution if available
         if 'topic' in df.columns:
             st.subheader("Posts by Topic")
@@ -247,9 +251,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             ax.bar([f'Topic {i}' for i in topic_counts.index], topic_counts.values, color='mediumpurple')
             ax.set_ylabel('Number of Posts')
             st.pyplot(fig)
-    
-    with tab3:
-        st.subheader("📈 Analytics")
+            st.divider()
         
 
         post_index = st.selectbox(
@@ -330,19 +332,23 @@ if "df" in st.session_state and st.session_state.df is not None:
         df['academic_year'] = df['title'].apply(detect_year)
         
         # Sidebar filters
-        col1, col2 = st.columns(2)
+        st.write("### Filter Resources")
+        filter_option = st.radio("Filter by:", ["Resource Type", "Academic Year", "View All"], horizontal=True)
         
-        with col1:
-            selected_year = st.selectbox("Filter by Year:", df['academic_year'].unique())
-        
-        with col2:
-            selected_resource = st.selectbox("Filter by Resource Type:", df['resource_type'].unique())
-        
-        # Filter data
-        filtered_df = df[(df['academic_year'] == selected_year) & (df['resource_type'] == selected_resource)]
+        if filter_option == "Resource Type":
+            selected_filter = st.selectbox("Select Resource Type:", sorted(df['resource_type'].unique()))
+            filtered_df = df[df['resource_type'] == selected_filter]
+            filter_label = selected_filter
+        elif filter_option == "Academic Year":
+            selected_filter = st.selectbox("Select Year:", sorted(df['academic_year'].unique()))
+            filtered_df = df[df['academic_year'] == selected_filter]
+            filter_label = selected_filter
+        else:
+            filtered_df = df.sort_values('score', ascending=False)
+            filter_label = "All Resources"
         
         if len(filtered_df) > 0:
-            st.success(f"Found {len(filtered_df)} resources")
+            st.success(f"Found {len(filtered_df)} resources in {filter_label}")
             
             for idx, row in filtered_df.iterrows():
                 with st.container():
@@ -350,14 +356,17 @@ if "df" in st.session_state and st.session_state.df is not None:
                     
                     with col1:
                         st.write(f"**{row['title']}**")
-                        st.caption(f"By: {row['author']} | Score: {row['score']} | Comments: {row['num_comments']}")
+                        year_badge = f"📅 {row['academic_year']}" if row['academic_year'] != 'Not Specified' else ""
+                        type_badge = f"📚 {row['resource_type']}"
+                        st.caption(f"By: {row['author']} | Score: {row['score']} | Comments: {row['num_comments']} | {type_badge} {year_badge}")
                     
                     with col2:
-                        st.markdown(f"[View →]({row['url']})")
+                        post_url = row['permalink'] if 'permalink' in row else row['url'] if 'url' in row else '#'
+                        st.markdown(f"[View →]({post_url})")
                     
                     st.write("---")
         else:
-            st.info(f"No resources found for {selected_year} - {selected_resource}")
+            st.info(f"No resources found in {filter_label}")
         
         # Statistics
         st.subheader("📊 Resource Statistics")
@@ -397,6 +406,114 @@ if "df" in st.session_state and st.session_state.df is not None:
     with tab5:
         st.subheader("💡 Insights & Analytics")
         
+        # Add semester detection
+        def detect_semester(title):
+            """Detect semester from title"""
+            title_lower = title.lower()
+            # Check for explicit semester mentions
+            if 'sem 1' in title_lower or 'semester 1' in title_lower:
+                return 'Sem 1'
+            elif 'sem 2' in title_lower or 'semester 2' in title_lower:
+                return 'Sem 2'
+            elif 'sem 3' in title_lower or 'semester 3' in title_lower:
+                return 'Sem 3'
+            elif 'sem 4' in title_lower or 'semester 4' in title_lower:
+                return 'Sem 4'
+            elif 'sem 5' in title_lower or 'semester 5' in title_lower:
+                return 'Sem 5'
+            elif 'sem 6' in title_lower or 'semester 6' in title_lower:
+                return 'Sem 6'
+            elif 'sem 7' in title_lower or 'semester 7' in title_lower:
+                return 'Sem 7'
+            elif 'sem 8' in title_lower or 'semester 8' in title_lower:
+                return 'Sem 8'
+            # Check for 1st/2nd/3rd/4th year mentions
+            elif '1st' in title_lower or 'first year' in title_lower:
+                return 'Sem 1-2'
+            elif '2nd' in title_lower or 'second year' in title_lower:
+                return 'Sem 3-4'
+            elif '3rd' in title_lower or 'third year' in title_lower:
+                return 'Sem 5-6'
+            elif '4th' in title_lower or 'fourth year' in title_lower:
+                return 'Sem 7-8'
+            else:
+                return 'All Semesters'
+        
+        # Add subject detection with SRM curriculum
+        def detect_subject_improved(title):
+            """Detect subject from title based on SRM curriculum"""
+            title_lower = title.lower()
+            
+            # 1st Year (Sem 1-2) - Engineering Fundamentals
+            if any(x in title_lower for x in ['physics', 'chemistry', 'maths', 'calculus', 'differential equations', 'linear algebra']):
+                return 'Math & Science'
+            if any(x in title_lower for x in ['c programming', 'python', 'java basics', 'programming fundamentals']):
+                return 'Programming Basics'
+            
+            # 2nd Year (Sem 3-4) - Core Engineering
+            if any(x in title_lower for x in ['dld', 'digital', 'logic', 'circuit', 'electronics']):
+                return 'Digital Logic & Circuits'
+            if any(x in title_lower for x in ['dsa', 'data structures', 'arrays', 'linked list', 'tree', 'graph']):
+                return 'Data Structures'
+            if any(x in title_lower for x in ['oop', 'object oriented', 'java oop', 'oops']):
+                return 'OOP & Java'
+            if any(x in title_lower for x in ['database', 'sql', 'db', 'dbms', 'normalization']):
+                return 'Database Systems'
+            
+            # 3rd Year (Sem 5-6) - Specialization
+            if any(x in title_lower for x in ['web', 'html', 'css', 'javascript', 'react', 'angular', 'nodejs']):
+                return 'Web Development'
+            if any(x in title_lower for x in ['ai', 'machine learning', 'ml', 'deep learning', 'neural', 'nlp']):
+                return 'AI & Machine Learning'
+            if any(x in title_lower for x in ['os', 'operating system', 'linux', 'windows', 'process', 'memory']):
+                return 'Operating Systems'
+            if any(x in title_lower for x in ['cn', 'computer network', 'tcp', 'ip', 'networking', 'protocols']):
+                return 'Computer Networks'
+            
+            # 4th Year (Sem 7-8) - Advanced & Placement
+            if any(x in title_lower for x in ['placement', 'interview', 'placement drive', 'placement news', 'job', 'internship']):
+                return 'Placement & Career'
+            if any(x in title_lower for x in ['project', 'capstone', 'final year', 'fyp']):
+                return 'Final Year Project'
+            
+            # General topics
+            if any(x in title_lower for x in ['exam', 'test', 'qp', 'question paper', 'mock']):
+                return 'Exams & Tests'
+            if any(x in title_lower for x in ['cgpa', 'gpa', 'marks', 'grade', 'result', 'transcript']):
+                return 'Academics & Results'
+            if any(x in title_lower for x in ['branch', 'cse', 'ece', 'civil', 'mechanical', 'ae']):
+                return 'Branch Related'
+            
+            return 'General Discussion'
+        
+        # Add columns for semester and improved subject
+        df['semester'] = df['title'].apply(detect_semester)
+        df['subject_category'] = df['title'].apply(detect_subject_improved)
+        
+        # Filter options
+        st.write("### 🎯 Filter Insights")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            selected_semester = st.selectbox(
+                "📚 Select Semester/Year:",
+                sorted(df['semester'].unique()),
+                index=0
+            )
+        
+        with col2:
+            selected_subject = st.selectbox(
+                "📖 Select Subject Category:",
+                sorted(df['subject_category'].unique()),
+                index=0
+            )
+        
+        # Filter data based on selection
+        filtered_insights = df[(df['semester'] == selected_semester) & (df['subject_category'] == selected_subject)]
+        
+        st.info(f"Showing {len(filtered_insights)} posts for **{selected_semester}** - **{selected_subject}**")
+        st.divider()
+        
         # Extract URLs button if not already present
         if 'urls' not in df.columns:
             st.warning("⚠️ URL extraction not available in current data")
@@ -410,52 +527,57 @@ if "df" in st.session_state and st.session_state.df is not None:
                     st.success("✅ URLs extracted!")
                     st.rerun()
         
-        # Sentiment Analysis
+        # Sentiment Analysis - for filtered data
         st.markdown("### 😊 Sentiment Analysis")
-        if 'sentiment' in df.columns:
-            sentiment_counts = df['sentiment'].value_counts()
+        if 'sentiment' in filtered_insights.columns:
+            sentiment_counts = filtered_insights['sentiment'].value_counts()
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Positive Posts", sentiment_counts.get('Positive', 0))
+                st.metric("😊 Positive Posts", sentiment_counts.get('Positive', 0))
             with col2:
-                st.metric("Neutral Posts", sentiment_counts.get('Neutral', 0))
+                st.metric("😐 Neutral Posts", sentiment_counts.get('Neutral', 0))
             with col3:
-                st.metric("Negative Posts", sentiment_counts.get('Negative', 0))
+                st.metric("😢 Negative Posts", sentiment_counts.get('Negative', 0))
             
-            fig, ax = plt.subplots()
-            sentiment_counts.plot(kind='bar', ax=ax, color=['green', 'gray', 'red'])
-            ax.set_ylabel('Number of Posts')
-            ax.set_title('Sentiment Distribution')
-            st.pyplot(fig)
+            if len(sentiment_counts) > 0:
+                fig, ax = plt.subplots()
+                sentiment_counts.plot(kind='bar', ax=ax, color=['green', 'gray', 'red'])
+                ax.set_ylabel('Number of Posts')
+                ax.set_title('Sentiment Distribution')
+                plt.xticks(rotation=0)
+                st.pyplot(fig)
         
         # Subject Analysis
         st.markdown("### 📚 Posts by Subject")
-        if 'subject' in df.columns:
-            subject_counts = df['subject'].value_counts()
-            fig, ax = plt.subplots()
-            subject_counts.plot(kind='barh', ax=ax, color='steelblue')
-            ax.set_xlabel('Number of Posts')
-            ax.set_title('Subject Distribution')
-            st.pyplot(fig)
-            
-            # Top subject details
-            st.write("**Top Subjects:**")
-            for subject, count in subject_counts.head(5).items():
-                st.write(f"• {subject}: {count} posts")
+        if 'subject' in filtered_insights.columns:
+            subject_counts = filtered_insights['subject'].value_counts()
+            if len(subject_counts) > 0:
+                fig, ax = plt.subplots()
+                subject_counts.plot(kind='barh', ax=ax, color='steelblue')
+                ax.set_xlabel('Number of Posts')
+                ax.set_title('Subject Distribution')
+                st.pyplot(fig)
+                
+                # Top subject details
+                st.write("**Top Subjects in Selection:**")
+                for subject, count in subject_counts.head(5).items():
+                    st.write(f"• {subject}: {count} posts")
         
-        # Top Contributors
+        # Top Contributors in filtered data
         st.markdown("### 👥 Top Contributors")
-        top_authors = df['author'].value_counts().head(10)
-        fig, ax = plt.subplots()
-        top_authors.plot(kind='barh', ax=ax, color='coral')
-        ax.set_xlabel('Number of Posts')
-        ax.set_title('Top 10 Contributors')
-        st.pyplot(fig)
+        if len(filtered_insights) > 0:
+            top_authors = filtered_insights['author'].value_counts().head(10)
+            if len(top_authors) > 0:
+                fig, ax = plt.subplots()
+                top_authors.plot(kind='barh', ax=ax, color='coral')
+                ax.set_xlabel('Number of Posts')
+                ax.set_title('Top Contributors in Selection')
+                st.pyplot(fig)
         
-        # Resources with Links
+        # Resources with Links - for filtered data
         st.markdown("### 🔗 Resources with Links")
-        if 'urls' in df.columns:
-            resources_with_links = df[df['urls'].notna() & (df['urls'] != '')]
+        if 'urls' in filtered_insights.columns:
+            resources_with_links = filtered_insights[filtered_insights['urls'].notna() & (filtered_insights['urls'] != '')]
             if len(resources_with_links) > 0:
                 st.write(f"Found **{len(resources_with_links)} posts** with resource links")
                 for idx, row in resources_with_links.head(10).iterrows():
@@ -468,7 +590,7 @@ if "df" in st.session_state and st.session_state.df is not None:
                     st.write(f"🔗 {row.get('urls', '')}")
                     st.divider()
             else:
-                st.info("No resources with links found yet")
+                st.info("No resources with links found in this selection")
         else:
             st.info("No 'urls' column in data — scrape with the latest scraper to enable link extraction")
     
