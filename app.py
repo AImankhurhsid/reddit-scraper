@@ -26,7 +26,7 @@ username = os.getenv('username')
 password = os.getenv('password')
 
 
-subreddit_name = st.sidebar.text_input("Subreddit Name", value="SRMUNIVERSITY", help="Enter the subreddit without 'r/'")
+subreddit_name = st.sidebar.text_input("Subreddit Name", value="SRMUNIVERSITY")
 num_posts = st.sidebar.slider("Number of Posts", min_value=10, max_value=500, value=100, step=10)
 
 # Language mapping
@@ -41,8 +41,7 @@ languages = {
 language_name = st.sidebar.selectbox(
     "Target Language for Translation",
     options=list(languages.keys()),
-    index=0,
-    help="Select a language to translate post titles"
+    index=0
 )
 target_language = (language_name, languages[language_name])
 
@@ -157,7 +156,7 @@ if "df" in st.session_state and st.session_state.df is not None:
     if target_language[1] != 'en' and translated_col not in df.columns:
         st.warning(f"⚠️ This data was scraped in a different language. To view translations in **{target_language[0]}**, please scrape again with that language selected.")
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Data Table", " Details", "📊 Analytics", "📚 Study Resources", "💾 Download"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📋 Data Table", " Details", "📊 Analytics", "📚 Study Resources", "💡 Insights", "💾 Download"])
     
     with tab1:
         st.subheader("Posts Data")
@@ -177,8 +176,10 @@ if "df" in st.session_state and st.session_state.df is not None:
         
         # Set default columns based on what's actually available
         default_cols = ['title', 'num_comments', 'flair']
+        if 'topic' in df_display.columns:
+            default_cols.insert(1, 'topic')
         if translated_col_name in df_display.columns:
-            default_cols.insert(1, translated_col_name)
+            default_cols.insert(2, translated_col_name)
         
         display_cols = st.multiselect(
             "Select columns to display",
@@ -193,12 +194,6 @@ if "df" in st.session_state and st.session_state.df is not None:
             html_table = html_table.replace('<td>', '<td style="padding: 10px; border-bottom: 1px solid #ddd;">')
             
             st.markdown(html_table, unsafe_allow_html=True)
-            
-            st.markdown("""
-            <div style='margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 5px;'>
-                <p><strong>💡 Tip:</strong> Click on any red title to open the Reddit post in a new tab!</p>
-            </div>
-            """, unsafe_allow_html=True)
     
     with tab2:
         st.subheader(" Post Details")
@@ -212,7 +207,7 @@ if "df" in st.session_state and st.session_state.df is not None:
             st.metric("Avg Score", f"{df['score'].mean():.1f}")
         
         with col3:
-            st.metric("Avg Comments", f"{df['num_comments'].mean():.1f}")
+            st.metric("Total Comments", int(df['num_comments'].sum()))
         
         with col4:
             st.metric("Max Score", df['score'].max())
@@ -243,6 +238,15 @@ if "df" in st.session_state and st.session_state.df is not None:
         ax.set_xlabel('Score')
         ax.set_ylabel('Number of Comments')
         st.pyplot(fig)
+        
+        # Topic distribution if available
+        if 'topic' in df.columns:
+            st.subheader("Posts by Topic")
+            topic_counts = df['topic'].value_counts().sort_index()
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.bar([f'Topic {i}' for i in topic_counts.index], topic_counts.values, color='mediumpurple')
+            ax.set_ylabel('Number of Posts')
+            st.pyplot(fig)
     
     with tab3:
         st.subheader("📈 Analytics")
@@ -391,7 +395,84 @@ if "df" in st.session_state and st.session_state.df is not None:
             st.pyplot(fig)
     
     with tab5:
-        st.subheader("💾 Download Data")
+        st.subheader("💡 Insights & Analytics")
+        
+        # Extract URLs button if not already present
+        if 'urls' not in df.columns:
+            st.warning("⚠️ URL extraction not available in current data")
+            if st.button("🔄 Extract URLs from Posts Now", key="extract_urls_btn"):
+                with st.spinner("Extracting URLs..."):
+                    import re
+                    df['urls'] = df['content'].fillna('').apply(
+                        lambda x: " | ".join(re.findall(r'https?://[^\s]+', str(x))) if x else ""
+                    )
+                    st.session_state.df = df
+                    st.success("✅ URLs extracted!")
+                    st.rerun()
+        
+        # Sentiment Analysis
+        st.markdown("### 😊 Sentiment Analysis")
+        if 'sentiment' in df.columns:
+            sentiment_counts = df['sentiment'].value_counts()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Positive Posts", sentiment_counts.get('Positive', 0))
+            with col2:
+                st.metric("Neutral Posts", sentiment_counts.get('Neutral', 0))
+            with col3:
+                st.metric("Negative Posts", sentiment_counts.get('Negative', 0))
+            
+            fig, ax = plt.subplots()
+            sentiment_counts.plot(kind='bar', ax=ax, color=['green', 'gray', 'red'])
+            ax.set_ylabel('Number of Posts')
+            ax.set_title('Sentiment Distribution')
+            st.pyplot(fig)
+        
+        # Subject Analysis
+        st.markdown("### 📚 Posts by Subject")
+        if 'subject' in df.columns:
+            subject_counts = df['subject'].value_counts()
+            fig, ax = plt.subplots()
+            subject_counts.plot(kind='barh', ax=ax, color='steelblue')
+            ax.set_xlabel('Number of Posts')
+            ax.set_title('Subject Distribution')
+            st.pyplot(fig)
+            
+            # Top subject details
+            st.write("**Top Subjects:**")
+            for subject, count in subject_counts.head(5).items():
+                st.write(f"• {subject}: {count} posts")
+        
+        # Top Contributors
+        st.markdown("### 👥 Top Contributors")
+        top_authors = df['author'].value_counts().head(10)
+        fig, ax = plt.subplots()
+        top_authors.plot(kind='barh', ax=ax, color='coral')
+        ax.set_xlabel('Number of Posts')
+        ax.set_title('Top 10 Contributors')
+        st.pyplot(fig)
+        
+        # Resources with Links
+        st.markdown("### 🔗 Resources with Links")
+        if 'urls' in df.columns:
+            resources_with_links = df[df['urls'].notna() & (df['urls'] != '')]
+            if len(resources_with_links) > 0:
+                st.write(f"Found **{len(resources_with_links)} posts** with resource links")
+                for idx, row in resources_with_links.head(10).iterrows():
+                    st.write(f"**{row.get('title','')[:60]}...**")
+                    # Safe access for optional fields
+                    sentiment = row.get('sentiment', 'N/A') if hasattr(row, 'get') else (row['sentiment'] if 'sentiment' in row else 'N/A')
+                    author = row.get('author', 'unknown') if hasattr(row, 'get') else row.get('author', 'unknown')
+                    score = row.get('score', '') if hasattr(row, 'get') else row.get('score', '')
+                    st.caption(f"Author: {author} | Score: {score} | {sentiment}")
+                    st.write(f"🔗 {row.get('urls', '')}")
+                    st.divider()
+            else:
+                st.info("No resources with links found yet")
+        else:
+            st.info("No 'urls' column in data — scrape with the latest scraper to enable link extraction")
+    
+    with tab6:
         
         csv = df.to_csv(index=False)
         st.download_button(
@@ -411,13 +492,3 @@ if "df" in st.session_state and st.session_state.df is not None:
 
 # Footer
 st.markdown("---")
-st.markdown("""
-### ℹ️ About This App
-This application scrapes Reddit posts from any subreddit and provides:
-- 📊 Real-time data visualization
-- 🌍 Multi-language translation
-- 📥 CSV and JSON export
-- 📈 Statistical analysis
-
-**Built with:** Streamlit, PRAW, Pandas, Deep Translator
-""")
